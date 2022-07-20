@@ -11,7 +11,7 @@ RUN GOARCH=amd64 CGO_ENABLED=0 go build -o kafka_exporter
 
 FROM quay.io/prometheus/busybox:latest
 
-COPY --from=build /go/src/danielqsj/kafka_exporter/metrics-server /bin/kafka_exporter
+COPY --from=build /go/src/danielqsj/kafka_exporter/kafka_exporter /bin/kafka_exporter
 
 EXPOSE     9308
 ENTRYPOINT [ "/bin/kafka_exporter" ]

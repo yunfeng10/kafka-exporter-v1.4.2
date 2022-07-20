@@ -1,2 +1,2 @@
-test-yaml/monitor.yaml
+test/*
 kafka_exporter
