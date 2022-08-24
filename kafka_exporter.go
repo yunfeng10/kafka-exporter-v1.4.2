@@ -315,6 +315,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	}
 	// Locking to avoid race add
 	e.sgMutex.Lock()
+	glog.V(TRACE).Info("Collect() Lock()")
 	e.sgChans = append(e.sgChans, ch)
 	// Safe to compare length since we own the Lock
 	if len(e.sgChans) == 1 {
@@ -326,6 +327,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// Put in another variable to ensure not overwriting it in another Collect once we wait
 	waiter := e.sgWaitCh
 	e.sgMutex.Unlock()
+	glog.V(TRACE).Info("Collect() Unlock()")
 	// Released lock, we have insurance that our chan will be part of the collectChan slice
 	<-waiter
 	// collectChan finished
@@ -343,6 +345,7 @@ func (e *Exporter) collectChans(quit chan struct{}) {
 	close(original)
 	// Lock to avoid modification on the channel slice
 	e.sgMutex.Lock()
+	glog.V(TRACE).Info("collectChans() Lock()")
 	for _, ch := range e.sgChans {
 		for _, metric := range container {
 			ch <- metric
@@ -354,6 +357,7 @@ func (e *Exporter) collectChans(quit chan struct{}) {
 	close(quit)
 	// Release the lock so Collect can append to the slice again
 	e.sgMutex.Unlock()
+	glog.V(TRACE).Info("collectChans() Unlock()")
 }
 
 func (e *Exporter) collect(ch chan<- prometheus.Metric) {
@@ -400,8 +404,10 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 			topicPartitions, prometheus.GaugeValue, float64(len(partitions)), topic,
 		)
 		e.mu.Lock()
+		glog.V(TRACE).Info("getTopicMetrics() Lock() topic:",topic," partitions:",partitions)
 		offset[topic] = make(map[int32]int64, len(partitions))
 		e.mu.Unlock()
+		glog.V(TRACE).Info("getTopicMetrics() Unlock() topic:",topic," partitions:",partitions)
 		for _, partition := range partitions {
 			broker, err := e.client.Leader(topic, partition)
 			if err != nil {
@@ -417,8 +423,10 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 				glog.Errorf("Cannot get current offset of topic %s partition %d: %v", topic, partition, err)
 			} else {
 				e.mu.Lock()
+				glog.V(TRACE).Info("getTopicMetrics() Lock() topic:",topic," partition:",partition," currentOffset:",currentOffset)
 				offset[topic][partition] = currentOffset
 				e.mu.Unlock()
+				glog.V(TRACE).Info("getTopicMetrics() Unlock() topic:",topic," partition:",partition," currentOffset:",currentOffset)
 				ch <- prometheus.MustNewConstMetric(
 					topicCurrentOffset, prometheus.GaugeValue, float64(currentOffset), topic, strconv.FormatInt(int64(partition), 10),
 				)
